@@ -6,7 +6,7 @@ from nonebot import get_plugin_config
 from nonebot.params import Depends
 from nonebot.matcher import Matcher
 from nonebot.plugin import on_startswith, on_message, PluginMetadata
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot, SUPERUSER
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot
 
 from .model import DataContainer
 from .utils import Attribute, get_msg, join_log_msg, get_name
