@@ -55,12 +55,12 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
     msg = '失败~'
     if (result > 96):
         msg = "大失败~"
-    if (result < attrs):
+    if (result <= attrs):
         msg = '成功！'
-    if (result < attrs*0.5):
+    if (result <= attrs*0.5):
         msg = '困难成功！'
-    if (result < attrs*0.2):
-        msg = "极限成功！"
+    if (result <= attrs*0.2):
+        msg = "极难成功！"
     if (result < 4):
         msg = "大成功！！"
     if (result == 0):
@@ -91,13 +91,14 @@ def COC() -> str:
     Returns:
         str: 角色卡信息
     """
-    STR = random('3d6')
-    CON = random('3d6')
-    SIZ = random('2d6+6')
-    DEX = random('3d6')
-    APP = random("3d6")
-    INT = random("2d6+6")
-    EDU = random("2d6+6")
-    POW = random("3d6")
-    LUC = random("3d6")
-    return f"力量{STR*5}体质{CON*5}体型{SIZ*5}敏捷{DEX*5}外貌{APP*5}智力{INT*5}教育{EDU*5}意志{POW*5}幸运{LUC*5}"
+    STR = random('3d6')*5
+    CON = random('3d6')*5
+    SIZ = random('2d6+6')*5
+    DEX = random('3d6')*5
+    APP = random("3d6")*5
+    INT = random("2d6+6")*5
+    EDU = random("2d6+6")*5
+    POW = random("3d6")*5
+    LUC = random("3d6")*5
+    SUM = STR+CON+SIZ+DEX+APP+INT+EDU+POW
+    return f"力量{STR}体质{CON}体型{SIZ}敏捷{DEX}外貌{APP}智力{INT}教育{EDU}意志{POW}幸运{LUC}共计{SUM}/{SUM+LUC}"

@@ -17,7 +17,8 @@ from .roll import COC, RA, RD, SC, random
 __plugin_meta__ = PluginMetadata(
     name="orange_dice",
     description="具有技能鉴定、人物卡、日志记录的COC用插件",
-    usage=".r[expr]([attr]) 骰点\n"
+    usage="欢迎使用本骰娘,本bot为Romuuu私人搭建仅用于亲友跑团,请勿滥用~\n"
+    ".r[expr]([attr]) 骰点\n"
     ".ra[attr]([value]) 属性骰点\n"
     ".st[attr][value]/clear 卡录/清除\n"
     ".log (on/off/upload/clear) 日志功能开启/关闭/上传/清除\n"
@@ -25,8 +26,9 @@ __plugin_meta__ = PluginMetadata(
     ".rh 暗骰\n"
     ".show 展示人物卡\n"
     ".ti/li 临时/永久疯狂检定\n"
-    ".coc([value]) 生成coc人物卡\n"
-    ".en[attr][expr] 属性成长\n",
+    ".coc5/coc10 生成5/10个coc人物卡\n"
+    ".en[attr][expr] 属性成长\n"
+    "基于GitHub-BigOrangeQWQ:nonebot_plugin_orangedice修改\n",
     type="application",
     config=Config,
     homepage="https://github.com/BigOrangeQWQ/nonebot_plugin_orangedice",
@@ -146,7 +148,7 @@ async def make_card_handle(matcher: Matcher, event: GroupMessageEvent):
         await matcher.finish("已清除您的数据！")
     attrs = Attribute(data.get_card(user_id).skills).extend_attrs(msg).to_str()
     data.set_card(user_id, attrs)
-    await matcher.finish("已录入您的车卡数据！")
+    await matcher.finish(f"已录入{user_id}的车卡数据！")
 
 
 @log.handle()
@@ -170,7 +172,7 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
         try:
             await bot.upload_group_file(group_id=group_id, file=file_path, name=f'logs-{event.message_id}.txt')
         except:
-            await matcher.finish("上传群文件失败，请检查橘子的权限。")
+            await matcher.finish("上传群文件失败，请检查权限。")
         await matcher.finish("已上传至群文件")
     if msg == 'clear':
         data.delete_log(group_id)
@@ -290,8 +292,9 @@ async def create_coc_role(event: MessageEvent, matcher: Matcher):
     if value== "":
         value = 1
     value = int(value)
-    if value > 5:
-        value = 5
+    if value > 10:
+        value = 10
+    # 10连保底
     await matcher.finish("\n".join([COC() for i in range(value)]))
 
 
