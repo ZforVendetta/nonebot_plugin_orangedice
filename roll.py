@@ -120,12 +120,12 @@ def COC() -> str:
     """
     STR = random('3d6')*5
     CON = random('3d6')*5
-    SIZ = random('2d6+6')*5
+    SIZ = random('2d6+1d8')*5
     DEX = random('3d6')*5
     APP = random("3d6")*5
     INT = random("2d6+6")*5
     EDU = random("2d6+6")*5
-    POW = random("3d6")*5
+    POW = random("2d6+1d8")*5
     LUC = random("3d6")*5
     SUM = STR+CON+SIZ+DEX+APP+INT+EDU+POW
     return f"力量{STR}体质{CON}体型{SIZ}敏捷{DEX}外貌{APP}智力{INT}教育{EDU}意志{POW}幸运{LUC}共计{SUM}/{SUM+LUC}"
