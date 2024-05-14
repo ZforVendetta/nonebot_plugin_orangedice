@@ -5,14 +5,14 @@ from typing import Dict, Union
 from nonebot import get_plugin_config
 from nonebot.params import Depends
 from nonebot.matcher import Matcher
-from nonebot.plugin import on_startswith, on_message, PluginMetadata
+from nonebot.plugin import on_regex, on_message, PluginMetadata
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot
 
 from .model import DataContainer
 from .utils import Attribute, get_msg, join_log_msg, get_name
 from .message import fear_list, crazy_forever, crazy_list, crazy_temp
 from .config import Config
-from .roll import COC, RA, RD, SC, random
+from .roll import COC, RA, RD, SC, random, RA_NUM
 
 __plugin_meta__ = PluginMetadata(
     name="orange_dice",
@@ -40,23 +40,24 @@ MANAGER = GROUP_ADMIN | GROUP_OWNER
 
 
 # -> 阻断响应器
-log = on_startswith(".log", permission=MANAGER, priority=5)  # 日志相关指令
-help = on_startswith(".help", priority=5)  # 帮助
+log = on_regex(r"[。.]log", permission=MANAGER, priority=5)  # 日志相关指令
+help = on_regex(r"[。.]help", priority=5)  # 帮助
 #骰点相关
-roll = on_startswith(".r", priority=5)  # roll点
-roll_card = on_startswith(".ra", priority=4)  # 人物技能roll点
-sancheck = on_startswith(".sc", priority=5)  # 理智检定
-roll_p = on_startswith(".rh", priority=4)  # 暗骰
+roll = on_regex(r"[。.]r\d", priority=5)  # roll点
+roll_single = on_regex(r"[。.]rd", priority=5)  # roll点
+roll_card = on_regex(r"[。.]ra", priority=4)  # 人物技能roll点
+sancheck = on_regex(r"[。.]sc", priority=5)  # 理智检定
+roll_p = on_regex(r"[。.]rh", priority=4)  # 暗骰
 #人物卡相关
-card = on_startswith(".st", priority=5)  # 人物卡录入
-show = on_startswith(".show", priority=5)  # 展示人物卡
-dao = on_startswith(".dao" ,priority=5) #人物卡导出
-coc_create = on_startswith(".coc", priority=5)  # 生成coc人物卡
-en = on_startswith(".en", priority=5)  # 属性成长
+card = on_regex(r"[。.]st", priority=5)  # 人物卡录入
+show = on_regex(r"[。.]show", priority=5)  # 展示人物卡
+dao = on_regex(r"[。.]dao" ,priority=5) #人物卡导出
+coc_create = on_regex(r"[。.]coc", priority=5)  # 生成coc人物卡
+en = on_regex(r"[。.]en", priority=5)  # 属性成长
 #疯狂检定相关
-insane_list = on_startswith(".list", priority=4)  # 获取所有疯狂表
-temp_insane = on_startswith(".ti", priority=5)  # 临时疯狂表
-forever_insane = on_startswith(".li", priority=5)  # 永久疯狂表
+insane_list = on_regex(r"[。.]list", priority=4)  # 获取所有疯狂表
+temp_insane = on_regex(r"[。.]ti", priority=5)  # 临时疯狂表
+forever_insane = on_regex(r"[。.]li", priority=5)  # 永久疯狂表
 # -> 数据相关
 plugin_config = get_plugin_config(Config)
 data = DataContainer()
@@ -65,6 +66,21 @@ async def log_msg_rule(event: GroupMessageEvent) -> bool:
     return data.is_logging(event.group_id)
 log_msg = on_message(rule=log_msg_rule, priority=1, block=False)  # 记录日志
 
+async def get_attr(name: str, user_id: str, item: str) -> str:
+    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
+    status: int = card.get(item, 0)
+    status = status if status is not None else status
+    if status == 0:
+        result: str = f"{name}没有属性[{item}]"
+    else:
+        result: str = f"{name}的[{item}]：{status}"
+    return result
+
+async def get_attr_int(user_id: str, item: str) -> int:
+    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
+    status: int = card.get(item, 0)
+    status = status if status is not None else status
+    return status
 
 @roll.handle()
 async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
@@ -87,6 +103,39 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
     msg: str = get_msg(event, 2)
     matches: Union[Match[str], None] = search(
         r"(\d|[d|a|k|q|p|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
+    print(f"matches")
+    if matches is None:
+
+        result: str = RD(name, msg)
+    else:
+        result = RD(name, matches.group(), msg.replace(matches.group(), ""))
+
+    join_log_msg(data, event, result)  # JOIN LOG MSG
+
+    await matcher.finish(result)
+
+@roll_single.handle()
+async def roll_single_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
+    """
+    处理单次骰点检定
+
+    Example:
+        [in].rd测试
+        RD('测试','PlayerName','1D100')
+        [out]进行了[测试]检定1D100=result
+
+        [in].r
+
+        RD('PlayerName',None, '')
+        [out]进行了检定1D100=result
+
+        [in].rd测试50
+        [error out]进行了检定1D100=0
+    """
+    msg: str = "1" + get_msg(event, 2)
+    matches: Union[Match[str], None] = search(
+        r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
+    print(f"matches")
     if matches is None:
 
         result: str = RD(name, msg)
@@ -112,14 +161,18 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
     """
 
     user_id: int = event.user_id
-    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
     msg = get_msg(event, 3)
     # 正则匹配
     match_item = search(r"\D{1,100}", msg)  # 搜索 测试
 
     if match_item is None:
-        await matcher.finish('没有找到需要检定的属性')
+        match_num = search(r"\d{1,3}", msg)
+        if match_num is not None:
+            result = RA_NUM(name, int(match_num.group()))
+        else:
+            await matcher.finish('没有找到需要检定的属性')
     else:
+        card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
         match_num = search(r"\d{1,3}", msg.replace(
             match_item.group(), ""))  # 搜索 测试100
         if match_num is not None:
@@ -132,9 +185,8 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
 
     await matcher.finish(result)
 
-
 @card.handle()
-async def make_card_handle(matcher: Matcher, event: GroupMessageEvent):
+async def make_card_handle(matcher: Matcher, event: GroupMessageEvent, name: str = Depends(get_name)):
     """处理玩家车卡数据
 
     Example:
@@ -143,12 +195,32 @@ async def make_card_handle(matcher: Matcher, event: GroupMessageEvent):
     """
     msg = get_msg(event, 3)
     user_id = event.user_id
-    if msg == 'clear':
-        data.delete_card(user_id)
-        await matcher.finish("已清除您的数据！")
+    match_item = search(r"clear|show\D{1,10}", msg)
+    # .st clear or .st show [attr]
+    if match_item is not None:
+        msg_clr_show = match_item.group()
+        if msg_clr_show == 'clear':
+            data.delete_card(user_id)
+            await matcher.finish("已清除您的数据！")
+        if msg_clr_show.startswith("show"):
+            item : str = msg.replace("show","")
+            await matcher.finish(await get_attr(name, user_id, item))
+    match_operator = search(r"[+-]", msg)
+    if match_operator is not None:
+        matches: Union[Match[str], None] = search(
+            r"(\d|[d|a|k|q|p]){1,1000}", msg)
+        if matches:
+            item: str = msg.replace(matches.group(), "").replace(match_operator.group(), "")
+            result: int = random(matches.group()) 
+            if match_operator.group() == "+":
+                data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(item, result).to_str())
+                await matcher.finish(f"{name} 的[{item}]增加了{result}点，当前:{await get_attr_int(user_id, item)}")
+            else:
+                data.set_card(user_id, Attribute(data.get_card(user_id).skills).minus(item, result).to_str())
+                await matcher.finish(f"{name} 的[{item}]减少了{result}点，当前:{await get_attr_int(user_id, item)}")
     attrs = Attribute(data.get_card(user_id).skills).extend_attrs(msg).to_str()
     data.set_card(user_id, attrs)
-    await matcher.finish(f"已录入{user_id}的车卡数据！")
+    await matcher.finish(f"已录入{user_id}的数据！")
 
 
 @log.handle()
@@ -231,14 +303,20 @@ async def private_roll_handle(matcher: Matcher, event: GroupMessageEvent, bot: B
 
 
 @show.handle()
-async def show_card_handle(event: MessageEvent):
+async def show_card_handle(event: MessageEvent, name: str = Depends(get_name)):
     """
     展示人物卡数据
     """
     user_id: int = event.user_id
-    card: str = Attribute(data.get_card(user_id).skills).to_str()
-    msg: str = f"你的车卡数据如下：\n{card}"
-    await show.finish(msg)
+    msg: str = get_msg(event, 5)
+    match_item = search(r"\D{1,100}", msg)  # 搜索 属性
+    if match_item is None:
+        card_all: str = Attribute(data.get_card(user_id).skills).to_str()
+        result: str = f"{name}的全部属性如下：\n{card_all}"
+    else:
+        result: str = await get_attr(name, user_id, match_item.group())
+        
+    await show.finish(result)
 
 
 @insane_list.handle()

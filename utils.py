@@ -73,7 +73,15 @@ class Attribute:
         else:
             self.set(attr, self.get(attr)+value)
         return self
-
+    
+    def minus(self, attr: str, value: int) -> Self:
+        """减少属性值"""
+        if self.get(attr)-value < 0:
+            self.set(attr, 0)
+        else:
+            self.set(attr, self.get(attr)-value)
+        return self
+    
     def extend_attrs(self, attrs: str) -> Self:
         """扩展属性"""
         self.attrs.update(self.get_attrs(attrs))

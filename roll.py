@@ -63,9 +63,36 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
         msg = "极难成功！"
     if (result < 4):
         msg = "大成功！！"
-    if (result == 0):
+    if (attrs == 0):
         return f'{player_name}没有这个属性'
     return f"{player_name}[{attrs}]进行了[{item}]检定1D100={result} {msg}"
+
+def RA_NUM(player_name: str, attr: int) -> str:
+    """进行检定并返回骰点信息
+
+    Args:
+        player_name (str): 玩家名字
+        user_id (int): QQ号
+        item (str): 检定技能
+        attr (int): 技能值
+
+    Returns:
+        str: 检定后信息
+    """
+    attrs: int = attr
+    result: int = random()
+    msg = '失败~'
+    if (result > 96):
+        msg = "大失败~"
+    if (result <= attrs):
+        msg = '成功！'
+    if (result <= attrs*0.5):
+        msg = '困难成功！'
+    if (result <= attrs*0.2):
+        msg = "极难成功！"
+    if (result < 4):
+        msg = "大成功！！"
+    return f"{player_name}[{attrs}]进行了检定1D100={result} {msg}"
 
 def SC(player_name: str , san: int, fdice: str, sdice: str) -> Tuple[str, int]:
     """理智检定返回骰点信息
