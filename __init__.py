@@ -44,8 +44,10 @@ log = on_regex(r"[。.]log", permission=MANAGER, priority=5)  # 日志相关指�
 help = on_regex(r"[。.]help", priority=5)  # 帮助
 #骰点相关
 roll = on_regex(r"[。.]r\d", priority=5)  # roll点
+roll_bonus = on_regex(r"[。.]rb", priority=5)  # roll点
+roll_punish = on_regex(r"[。.]rp", priority=5)  # roll点
 roll_single = on_regex(r"[。.]rd", priority=5)  # roll点
-roll_card = on_regex(r"[。.]ra", priority=4)  # 人物技能roll点
+roll_card = on_regex(r"[。.]r[abpc]", priority=4)  # 人物技能roll点
 sancheck = on_regex(r"[。.]sc", priority=5)  # 理智检定
 roll_p = on_regex(r"[。.]rh", priority=4)  # 暗骰
 #人物卡相关
@@ -163,6 +165,13 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
     user_id: int = event.user_id
     msg = get_msg(event, 3)
     # 正则匹配
+    PBCls: int = 0
+    if get_msg(event, 2).startswith("b"):
+        PBCls = 1
+    elif get_msg(event, 2).startswith("p"):
+        PBCls = 2
+    elif get_msg(event, 2).startswith("c"):
+        PBCls = 3
     match_item = search(r"\D{1,100}", msg)  # 搜索 测试
 
     if match_item is None:
@@ -177,9 +186,9 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
             match_item.group(), ""))  # 搜索 测试100
         if match_num is not None:
             result = RA(name, match_item.group(),
-                        int(match_num.group()), card)
+                        int(match_num.group()), card, PBCls)
         else:
-            result = RA(name, match_item.group(), None, card)
+            result = RA(name, match_item.group(), None, card, PBCls)
 
     join_log_msg(data, event, result)  # JOIN LOG MSG
 

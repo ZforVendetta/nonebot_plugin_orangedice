@@ -34,10 +34,10 @@ def RD(player_name: Optional[str], statement: str = '1d100', item: str = '', ) -
     statement = '1d100' if statement == 'd' or statement == '' else statement
     result = random(statement)
     item = f'[{item}]' if item != '' else ''
-    return f"{player_name}进行了{item}检定{statement.upper()}={result}"
+    return f"{player_name}的{item}投掷结果：{statement.upper()}={result}"
 
 
-def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[str, int]) -> str:
+def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[str, int], PBCls: int) -> str:
     """进行检定并返回骰点信息
 
     Args:
@@ -51,8 +51,32 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
     """
     attrs: int = card.get(item, 0)
     attrs = attr if attr is not None else attrs
+    if (attrs == 0):
+        return f'{player_name}没有这个属性'
     result: int = random()
     msg = '失败~'
+    exMsg: str = ""
+    if PBCls == 1: #Bonus
+        PubResult: int = random("1d10")
+        exMsg = f"(奖励骰:{result}/{PubResult})"
+        result = min(result // 10, PubResult) * 10 + result % 10 
+    elif PBCls == 2: #Publish
+        PubResult: int = random("1d10")
+        exMsg = f"(惩罚骰:{result}/{PubResult})"
+        result = max(result // 10, PubResult) * 10 + result % 10
+        result = 100 if result > 100 else result
+    elif PBCls == 3: #standard rule
+        if ((result > 95 and attrs < 50) or result == 10):
+            msg = "大失败~"
+        if (result <= attrs):
+            msg = '成功！'
+        if (result <= attrs*0.5):
+            msg = '困难成功！'
+        if (result <= attrs*0.2):
+            msg = "极难成功！"
+        if (result == 1):
+            msg = "大成功！！"
+        return f"{player_name}的[{item}]标准规则检定结果:D100={result}/{attrs} {msg}"
     if (result > 96):
         msg = "大失败~"
     if (result <= attrs):
@@ -63,9 +87,7 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
         msg = "极难成功！"
     if (result < 4):
         msg = "大成功！！"
-    if (attrs == 0):
-        return f'{player_name}没有这个属性'
-    return f"{player_name}[{attrs}]进行了[{item}]检定1D100={result} {msg}"
+    return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
 
 def RA_NUM(player_name: str, attr: int) -> str:
     """进行检定并返回骰点信息
@@ -92,7 +114,7 @@ def RA_NUM(player_name: str, attr: int) -> str:
         msg = "极难成功！"
     if (result < 4):
         msg = "大成功！！"
-    return f"{player_name}[{attrs}]进行了检定1D100={result} {msg}"
+    return f"{player_name}的检定结果:D100={result}/{attrs} {msg}"
 
 def SC(player_name: str , san: int, fdice: str, sdice: str) -> Tuple[str, int]:
     """理智检定返回骰点信息
@@ -109,7 +131,7 @@ def SC(player_name: str , san: int, fdice: str, sdice: str) -> Tuple[str, int]:
     result: int = random() 
     msg = '失败~' if result > san else '成功！'
     drop_san = random(fdice) if result > san else random(sdice)
-    return f"{player_name}进行了理智检定1D100={result} {msg}\n损失{drop_san}理智值 剩余理智值{san-drop_san}", drop_san
+    return f"{player_name}的理智检定结果:D100={result} {msg}\n损失{drop_san}理智值 剩余理智值{san-drop_san}", drop_san
 
 def COC() -> str:
     """
