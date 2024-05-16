@@ -41,33 +41,33 @@ class Attribute:
         attrs: Dict[str, int] = {}
         for i in find:
             a, b = i
-            if self.is_alias(a):
-                attrs[self.alias_dict[a]] = int(b)
-            else:
-                attrs[str(a)] = int(b)
+            attrs[self.get_alias(str(a))] = int(b)
         return attrs
     
     def _alias_dict(self) -> Dict[str, str]:
-        """返回别名字典 {别名:属性}"""
+        """返回属性名字典 {输入属性名:存储属性名}"""
         alias_dict: Dict[str, str] = {}
         for k,v in same_attr_list.items():
+            alias_dict[k] = k
             for i in v:
                 alias_dict[i] = k
         return alias_dict
     
-    def is_alias(self, attr: str) -> bool:
-        """判定属性是否为别名"""
+    def get_alias(self, attr: str) -> bool:
+        """获取存储属性名"""
         if attr in self.same:
-            return True
-        return False
+            return self.alias_dict[attr]
+        return attr
 
     def set(self, attr: str, value: int) -> Self:
         """设置属性值"""
+        attr = self.get_alias(attr)
         self.attrs[attr] = value
         return self
     
     def add(self, attr: str, value: int) -> Self:
         """增加属性值"""
+        attr = self.get_alias(attr)
         if self.get(attr)+value > 100:
             self.set(attr, 100)
         else:
@@ -76,6 +76,7 @@ class Attribute:
     
     def minus(self, attr: str, value: int) -> Self:
         """减少属性值"""
+        attr = self.get_alias(attr)
         if self.get(attr)-value < 0:
             self.set(attr, 0)
         else:
@@ -84,13 +85,13 @@ class Attribute:
     
     def extend_attrs(self, attrs: str) -> Self:
         """扩展属性"""
+        attr = self.get_alias(attr)
         self.attrs.update(self.get_attrs(attrs))
         return self
 
     def get(self, attr: str) -> int:
         """获取属性值"""
-        if self.is_alias(attr):
-            return self.attrs.get(self.alias_dict.get(attr,'none'), 0)
+        attr = self.get_alias(attr)
         return self.attrs.get(attr, 0)
     
     def dao(self) -> str:
@@ -134,7 +135,6 @@ def join_log_msg(data: DataContainer, event: MessageEvent, msg: str):
 def get_name(event: MessageEvent) -> str:
     """获取玩家昵称"""
     return event.sender.card if event.sender.card else (event.sender.nickname if event.sender.nickname else "PL")
-
 
 def get_msg(event: MessageEvent, index: int) -> str:
     """获取消息"""

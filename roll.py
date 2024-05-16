@@ -4,6 +4,7 @@
 from typing import Optional, Dict, Tuple
 
 from .dice import Lexer, Parser
+from utils import get_alias
 
 def random(statement: str = '1d100') -> int:
     """
@@ -49,7 +50,7 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
     Returns:
         str: 检定后信息
     """
-    attrs: int = card.get(item, 0)
+    attrs: int = card.get(get_alias(item), 0)
     attrs = attr if attr is not None else attrs
     if (attrs == 0):
         return f'{player_name}没有这个属性'
@@ -90,12 +91,11 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
     return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
 
 def RA_NUM(player_name: str, attr: int) -> str:
-    """进行检定并返回骰点信息
+    """进行数字检定并返回骰点信息
 
     Args:
         player_name (str): 玩家名字
         user_id (int): QQ号
-        item (str): 检定技能
         attr (int): 技能值
 
     Returns:

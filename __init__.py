@@ -9,7 +9,7 @@ from nonebot.plugin import on_regex, on_message, PluginMetadata
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot
 
 from .model import DataContainer
-from .utils import Attribute, get_msg, join_log_msg, get_name
+from .utils import Attribute, get_msg, join_log_msg, get_name, get_alias
 from .message import fear_list, crazy_forever, crazy_list, crazy_temp
 from .config import Config
 from .roll import COC, RA, RD, SC, random, RA_NUM
@@ -69,8 +69,8 @@ async def log_msg_rule(event: GroupMessageEvent) -> bool:
 log_msg = on_message(rule=log_msg_rule, priority=1, block=False)  # 记录日志
 
 async def get_attr(name: str, user_id: str, item: str) -> str:
-    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
-    status: int = card.get(item, 0)
+    attrs = Attribute(data.get_card(user_id).skills).attrs
+    status: int = attrs.get(get_alias(item))
     status = status if status is not None else status
     if status == 0:
         result: str = f"{name}没有属性[{item}]"
@@ -79,8 +79,8 @@ async def get_attr(name: str, user_id: str, item: str) -> str:
     return result
 
 async def get_attr_int(user_id: str, item: str) -> int:
-    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
-    status: int = card.get(item, 0)
+    attrs = Attribute(data.get_card(user_id).skills).attrs
+    status: int = attrs.get(get_alias(item))
     status = status if status is not None else status
     return status
 
@@ -185,10 +185,10 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
         match_num = search(r"\d{1,3}", msg.replace(
             match_item.group(), ""))  # 搜索 测试100
         if match_num is not None:
-            result = RA(name, match_item.group(),
+            result = RA(name, get_alias(match_item.group()),
                         int(match_num.group()), card, PBCls)
         else:
-            result = RA(name, match_item.group(), None, card, PBCls)
+            result = RA(name, get_alias(match_item.group()), None, card, PBCls)
 
     join_log_msg(data, event, result)  # JOIN LOG MSG
 
@@ -217,15 +217,15 @@ async def make_card_handle(matcher: Matcher, event: GroupMessageEvent, name: str
     match_operator = search(r"[+-]", msg)
     if match_operator is not None:
         matches: Union[Match[str], None] = search(
-            r"(\d|[d|a|k|q|p]){1,1000}", msg)
+            r"(\d|d\d){1,1000}", msg)
         if matches:
             item: str = msg.replace(matches.group(), "").replace(match_operator.group(), "")
             result: int = random(matches.group()) 
             if match_operator.group() == "+":
-                data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(item, result).to_str())
+                data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(get_alias(item), result).to_str())
                 await matcher.finish(f"{name} 的[{item}]增加了{result}点，当前:{await get_attr_int(user_id, item)}")
             else:
-                data.set_card(user_id, Attribute(data.get_card(user_id).skills).minus(item, result).to_str())
+                data.set_card(user_id, Attribute(data.get_card(user_id).skills).minus(get_alias(item), result).to_str())
                 await matcher.finish(f"{name} 的[{item}]减少了{result}点，当前:{await get_attr_int(user_id, item)}")
     attrs = Attribute(data.get_card(user_id).skills).extend_attrs(msg).to_str()
     data.set_card(user_id, attrs)
@@ -411,5 +411,5 @@ async def improve_self(event: MessageEvent, matcher: Matcher,name: str = Depends
         item: str = msg.replace(matches.group(), "")
         result: int = random(matches.group()) 
         user_id: int = event.user_id
-        data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(item, result).to_str())
+        data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(get_alias(item), result).to_str())
         await matcher.finish(f"{name} 对 {item} 理解提升了 {result} !")
