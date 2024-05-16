@@ -26,13 +26,30 @@ same_attr_list: Dict[str, Tuple] = {
     "克苏鲁神话":("克苏鲁","cm")
 }
 
+def same_list():
+        """将同义词并做一个集合"""
+        same = set()
+        for i in same_attr_list.values():
+            same.update(i)
+        return same
+
+def get_alias_dict() -> Dict[str, str]:
+        """返回属性名字典 {输入属性名:存储属性名}"""
+        alias_dict: Dict[str, str] = {}
+        for k,v in same_attr_list.items():
+            alias_dict[k] = k
+            for i in v:
+                alias_dict[i] = k
+        return alias_dict
+
+SAME = same_list()
+
+ALIAS_DICT = get_alias_dict()
 
 class Attribute:
     """属性类"""
 
     def __init__(self, args: str):
-        self.same = self.same_list()
-        self.alias_dict = self._alias_dict()
         self.attrs = self.get_attrs(args)
 
     def get_attrs(self, msg: str) -> Dict[str, int]:
@@ -41,33 +58,20 @@ class Attribute:
         attrs: Dict[str, int] = {}
         for i in find:
             a, b = i
-            attrs[self.get_alias(str(a))] = int(b)
+            attrs[get_alias(str(a))] = int(b)
         return attrs
     
-    def _alias_dict(self) -> Dict[str, str]:
-        """返回属性名字典 {输入属性名:存储属性名}"""
-        alias_dict: Dict[str, str] = {}
-        for k,v in same_attr_list.items():
-            alias_dict[k] = k
-            for i in v:
-                alias_dict[i] = k
-        return alias_dict
     
-    def get_alias(self, attr: str) -> bool:
-        """获取存储属性名"""
-        if attr in self.same:
-            return self.alias_dict[attr]
-        return attr
 
     def set(self, attr: str, value: int) -> Self:
         """设置属性值"""
-        attr = self.get_alias(attr)
+        attr = get_alias(attr)
         self.attrs[attr] = value
         return self
     
     def add(self, attr: str, value: int) -> Self:
         """增加属性值"""
-        attr = self.get_alias(attr)
+        attr = get_alias(attr)
         if self.get(attr)+value > 100:
             self.set(attr, 100)
         else:
@@ -76,7 +80,7 @@ class Attribute:
     
     def minus(self, attr: str, value: int) -> Self:
         """减少属性值"""
-        attr = self.get_alias(attr)
+        attr = get_alias(attr)
         if self.get(attr)-value < 0:
             self.set(attr, 0)
         else:
@@ -85,13 +89,13 @@ class Attribute:
     
     def extend_attrs(self, attrs: str) -> Self:
         """扩展属性"""
-        attr = self.get_alias(attr)
+        attr = get_alias(attr)
         self.attrs.update(self.get_attrs(attrs))
         return self
 
     def get(self, attr: str) -> int:
         """获取属性值"""
-        attr = self.get_alias(attr)
+        attr = get_alias(attr)
         return self.attrs.get(attr, 0)
     
     def dao(self) -> str:
@@ -102,14 +106,6 @@ class Attribute:
                 for i in v:
                     c+=f"{i}{self.get(k)}"
         return c
-    
-    def same_list(self):
-        """将同义词并做一个集合"""
-        same = set()
-        for i in same_attr_list.values():
-            same.update(i)
-        return same
-    
     def set_back(self):
         ...
 
@@ -123,6 +119,11 @@ class Attribute:
             attrs += f"{k}{v}"
         return attrs
     
+def get_alias(attr: str) -> bool:
+        """获取存储属性名"""
+        if attr in SAME:
+            return ALIAS_DICT[attr]
+        return attr
 
 def join_log_msg(data: DataContainer, event: MessageEvent, msg: str):
     """拼接日志消息"""

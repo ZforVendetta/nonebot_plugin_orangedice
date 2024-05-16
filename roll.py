@@ -4,7 +4,8 @@
 from typing import Optional, Dict, Tuple
 
 from .dice import Lexer, Parser
-from utils import get_alias
+from .utils import get_alias
+    
 
 def random(statement: str = '1d100') -> int:
     """
