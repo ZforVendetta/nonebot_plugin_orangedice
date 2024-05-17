@@ -204,7 +204,7 @@ async def make_card_handle(matcher: Matcher, event: GroupMessageEvent, name: str
     """
     msg = get_msg(event, 3)
     user_id = event.user_id
-    match_item = search(r"clear|show\D{1,10}", msg)
+    match_item = search(r"clear|show", msg)
     # .st clear or .st show [attr]
     if match_item is not None:
         msg_clr_show = match_item.group()
