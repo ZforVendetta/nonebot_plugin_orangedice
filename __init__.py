@@ -239,10 +239,12 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
     """
     msg: str = get_msg(event, 4)
     group_id: int = event.group_id
+    '''
     if msg.startswith("new"):
         file_name = search(r"(?<=new ).*", msg).group()
         data.create_log(group_id, file_name)
         await matcher.finish("已创建记录日志<{file_name}>")
+        '''
     if msg.startswith("on"):
         data.open_log(group_id)
         await matcher.finish(f"已开启记录日志<{file_name}>")
