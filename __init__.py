@@ -239,13 +239,17 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
     """
     msg: str = get_msg(event, 4)
     group_id: int = event.group_id
-    if msg == 'on':
+    if msg.startswith("new"):
+        file_name = search(r"(?<=new ).*", msg).group()
+        data.create_log(group_id, file_name)
+        await matcher.finish("已创建记录日志<{file_name}>")
+    if msg.startswith("on"):
         data.open_log(group_id)
-        await matcher.finish("已开启记录日志")
-    if msg == 'off':
+        await matcher.finish(f"已开启记录日志<{file_name}>")
+    if msg.startswith("off"):
         data.close_log(group_id)
-        await matcher.finish("已关闭记录日志")
-    if msg == 'upload':
+        await matcher.finish("已暂停记录日志")
+    if msg.startswith("end"):
         with open(plugin_config.cache_file, 'w', encoding='utf-8') as f:
             for i in data.get_log(group_id).msg:
                 f.write(f"{i}\n")
@@ -259,7 +263,7 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
         data.delete_log(group_id)
         await matcher.finish("已清除此群之前的所有日志信息")
     else:
-        await matcher.finish("不清楚你想干什么~")
+        await matcher.finish("log指令为.log new [log名] / .log on / .log off / .log end 请认指令是否正确。")
 
 
 @sancheck.handle()

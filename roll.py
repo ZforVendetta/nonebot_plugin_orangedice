@@ -33,7 +33,8 @@ def RD(player_name: Optional[str], statement: str = '1d100', item: str = '', ) -
     Return:
         str 检定后信息
     """
-    statement = '1d100' if statement == 'd' or statement == '' else statement
+    statement = '1d100' if statement == '1d' or statement == '1' else statement
+    print(f"statement:{statement}")
     result = random(statement)
     item = f'[{item}]' if item != '' else ''
     return f"{player_name}的{item}投掷结果：{statement.upper()}={result}"

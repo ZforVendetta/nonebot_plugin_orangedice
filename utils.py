@@ -89,7 +89,6 @@ class Attribute:
     
     def extend_attrs(self, attrs: str) -> Self:
         """扩展属性"""
-        attr = get_alias(attr)
         self.attrs.update(self.get_attrs(attrs))
         return self
 
