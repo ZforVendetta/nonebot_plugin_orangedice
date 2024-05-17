@@ -237,14 +237,13 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
     """
     日志相关指令
     """
+    '''
     msg: str = get_msg(event, 4)
     group_id: int = event.group_id
-    '''
     if msg.startswith("new"):
         file_name = search(r"(?<=new ).*", msg).group()
         data.create_log(group_id, file_name)
         await matcher.finish("已创建记录日志<{file_name}>")
-        '''
     if msg.startswith("on"):
         data.open_log(group_id)
         await matcher.finish(f"已开启记录日志<{file_name}>")
@@ -267,6 +266,8 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
     else:
         await matcher.finish("log指令为.log new [log名] / .log on / .log off / .log end 请认指令是否正确。")
 
+    '''
+    await matcher.finish("log功能维护中...")
 
 @sancheck.handle()
 async def sancheck_handle(matcher: Matcher, event: MessageEvent):
