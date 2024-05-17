@@ -40,26 +40,26 @@ MANAGER = GROUP_ADMIN | GROUP_OWNER
 
 
 # -> 阻断响应器
-log = on_regex(r"[。.]log", permission=MANAGER, priority=5)  # 日志相关指令
-help = on_regex(r"[。.]help", priority=5)  # 帮助
+log = on_regex(r"^[。.]log", permission=MANAGER, priority=5)  # 日志相关指令
+help = on_regex(r"^[。.]help", priority=5)  # 帮助
 #骰点相关
-roll = on_regex(r"[。.]r\d", priority=5)  # roll点
-roll_bonus = on_regex(r"[。.]rb", priority=5)  # roll点
-roll_punish = on_regex(r"[。.]rp", priority=5)  # roll点
-roll_single = on_regex(r"[。.]rd", priority=5)  # roll点
-roll_card = on_regex(r"[。.]r[abpc]", priority=4)  # 人物技能roll点
-sancheck = on_regex(r"[。.]sc", priority=5)  # 理智检定
-roll_p = on_regex(r"[。.]rh", priority=4)  # 暗骰
+roll = on_regex(r"^[。.]r\d", priority=5)  # roll点
+roll_bonus = on_regex(r"^[。.]rb", priority=5)  # roll点
+roll_punish = on_regex(r"^[。.]rp", priority=5)  # roll点
+roll_single = on_regex(r"^[。.]rd", priority=5)  # roll点
+roll_card = on_regex(r"^[。.]r[abpc]", priority=4)  # 人物技能roll点
+sancheck = on_regex(r"^[。.]sc", priority=5)  # 理智检定
+roll_p = on_regex(r"^[。.]rh", priority=4)  # 暗骰
 #人物卡相关
-card = on_regex(r"[。.]st", priority=5)  # 人物卡录入
-show = on_regex(r"[。.]show", priority=5)  # 展示人物卡
-dao = on_regex(r"[。.]dao" ,priority=5) #人物卡导出
-coc_create = on_regex(r"[。.]coc", priority=5)  # 生成coc人物卡
-en = on_regex(r"[。.]en", priority=5)  # 属性成长
+card = on_regex(r"^[。.]st", priority=5)  # 人物卡录入
+show = on_regex(r"^[。.]show", priority=5)  # 展示人物卡
+dao = on_regex(r"^[。.]dao" ,priority=5) #人物卡导出
+coc_create = on_regex(r"^[。.]coc", priority=5)  # 生成coc人物卡
+en = on_regex(r"^[。.]en", priority=5)  # 属性成长
 #疯狂检定相关
-insane_list = on_regex(r"[。.]list", priority=4)  # 获取所有疯狂表
-temp_insane = on_regex(r"[。.]ti", priority=5)  # 临时疯狂表
-forever_insane = on_regex(r"[。.]li", priority=5)  # 永久疯狂表
+insane_list = on_regex(r"^[。.]list", priority=4)  # 获取所有疯狂表
+temp_insane = on_regex(r"^[。.]ti", priority=5)  # 临时疯狂表
+forever_insane = on_regex(r"^[。.]li", priority=5)  # 永久疯狂表
 # -> 数据相关
 plugin_config = get_plugin_config(Config)
 data = DataContainer()
