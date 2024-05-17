@@ -62,12 +62,23 @@ SQLITE_FILE=DICE.db #数据库位置
 
 - [x] .r  骰点
 - [x] .rh 暗骰
-- [x] .ra 属性骰点
-- [x] .st 录卡
+- [x] .ra 属性检定骰点
+- [x] .rb 属性奖励检定骰点
+- [x] .rp 属性惩罚检定骰点
+- [x] .rc 属性标准规则书检定骰点
+- [x] .st 录卡/加减属性数值
+- [x] .st show 显示指定属性数值
 - [x] .li/ti 总结/临时疯狂检定
 - [x] .sc sancheck
 - [x] .log 日志
-- [ ] .nn 昵称修改
+- [ ] .log new 创建指定名称日志
+- [ ] .log on 开始记录日志
+- [ ] .log off 暂停记录日志
+- [ ] .log end 结束记录日志
+- [ ] .log upload 上传日志到群文件
+- [ ] .log clear 删除日志记录（逻辑删除）
+- [ ] .new 创建角色
+- [ ] .tag 绑定角色
 - [x] .help 帮助
 - [x] .list 疯狂列表
 - [x] .coc 车卡
@@ -76,7 +87,7 @@ SQLITE_FILE=DICE.db #数据库位置
 
 ---
 
-### HELP 获取帮助
+### HELP 获取帮助（未更新）
 获取快捷的指令帮助
 ```
 .help
@@ -93,7 +104,7 @@ SQLITE_FILE=DICE.db #数据库位置
 ".en[attr][expr] 属性成长"
 ```
 
-### RD 普通骰子
+### RD 普通骰子（未更新）
 普通的骰点，格式为 [onedice标准](https://github.com/OlivOS-Team/onedice) 内COC的骰子格式
 
 ```
@@ -103,7 +114,7 @@ SQLITE_FILE=DICE.db #数据库位置
 .r5d100a10
 ```
 
-### RA 属性掷点
+### RA 属性掷点（未更新）
 掷出一个 1D100 的骰子进行属性/技能检定  
 不提供 value 则在人物卡中获取属性
 
@@ -114,7 +125,7 @@ SQLITE_FILE=DICE.db #数据库位置
 .ra属性60
 ```
 
-### RH 暗骰
+### RH 暗骰（未更新）
 掷出一个 1D100 的骰子
 并发送至指令执行者的窗口 
 ```
@@ -131,7 +142,7 @@ SQLITE_FILE=DICE.db #数据库位置
 .en理智1d5+2
 ```
 
-### ST 录人物卡
+### ST 录人物卡（未更新）
 录入人物属性卡，仅当使用 clear 时重置人物卡
 ```
 .st([attritube][value])/(clear)
@@ -173,7 +184,7 @@ SQLITE_FILE=DICE.db #数据库位置
 .coc3 #生成三个跑团角色属性卡
 ```
 
-### LOG 日志记录
+### LOG 日志记录（未更新）
 记录跑团/群聊日志，此功能需群管理/群主才可开启
 ```
 .log (on)/(off)/(upload)/(clear)
