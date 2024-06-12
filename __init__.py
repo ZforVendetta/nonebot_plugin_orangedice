@@ -5,11 +5,11 @@ from typing import Dict, Union
 from nonebot import get_plugin_config
 from nonebot.params import Depends
 from nonebot.matcher import Matcher
-from nonebot.plugin import on_regex, on_message, PluginMetadata
-from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot
+from nonebot.plugin import on_regex, on_message, on_notice, PluginMetadata
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot, GroupRecallNoticeEvent
 
 from .model import DataContainer
-from .utils import Attribute, get_msg, join_log_msg, get_name
+from .utils import Attribute, get_msg, join_log_msg, join_log_bot_msg, get_name
 from .message import fear_list, crazy_forever, crazy_list, crazy_temp
 from .config import Config
 from .roll import COC, RA, RD, SC, random, RA_NUM
@@ -20,15 +20,19 @@ __plugin_meta__ = PluginMetadata(
     usage="欢迎使用本骰娘,本bot为Romuuu私人搭建仅用于亲友跑团,请勿滥用~\n"
     ".r[expr]([attr]) 骰点\n"
     ".ra[attr]([value]) 属性骰点\n"
+    ".rp[attr] 惩罚属性骰点\n"
+    ".rb[attr] 奖励属性骰点\n"
+    ".rc[attr] 标准规则书属性骰点\n"
     ".st[attr][value]/clear 卡录/清除\n"
-    ".log (on/off/upload/clear) 日志功能开启/关闭/上传/清除\n"
+    ".st show [attr] 展示单个属性\n"
+    ".log (new[name]/on/off/end/upload/clear) 日志功能开启/关闭/上传/清除(维护中)\n"
     ".sc[success]/[failure] ([san]) 理智检定[不可使用除法]\n"
     ".rh 暗骰\n"
-    ".show 展示人物卡\n"
+    ".show 展示全部属性\n"
     ".ti/li 临时/永久疯狂检定\n"
     ".coc5/coc10 生成5/10个coc人物卡\n"
     ".en[attr][expr] 属性成长\n"
-    "基于GitHub-BigOrangeQWQ:nonebot_plugin_orangedice修改\n",
+    "基于GitHub-BigOrangeQWQ:nonebot_plugin_orangedice\n",
     type="application",
     config=Config,
     homepage="https://github.com/BigOrangeQWQ/nonebot_plugin_orangedice",
@@ -37,6 +41,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 MANAGER = GROUP_ADMIN | GROUP_OWNER
+DB_ERROR_MSG = "数据处理错误！请联系管理员QQ:623749594"
 
 
 # -> 阻断响应器
@@ -60,14 +65,30 @@ en = on_regex(r"^[。.]en", priority=5)  # 属性成长
 insane_list = on_regex(r"^[。.]list", priority=4)  # 获取所有疯狂表
 temp_insane = on_regex(r"^[。.]ti", priority=5)  # 临时疯狂表
 forever_insane = on_regex(r"^[。.]li", priority=5)  # 永久疯狂表
+# -> 撤回响应
+log_recall = on_notice()
 # -> 数据相关
 plugin_config = get_plugin_config(Config)
 data = DataContainer()
+
+LOG_ON_LIST_TEMP= []
 # -> 非阻断响应器
 async def log_msg_rule(event: GroupMessageEvent) -> bool:
-    return data.is_logging(event.group_id)
+    global LOG_ON_LIST_TEMP
+    if not LOG_ON_LIST_TEMP:
+        LOG_ON_LIST_TEMP = data.get_log_on_list()
+    return event.group_id in LOG_ON_LIST_TEMP
+
 log_msg = on_message(rule=log_msg_rule, priority=1, block=False)  # 记录日志
 
+@log_recall.handle()
+async def recall_group_logs(event: GroupRecallNoticeEvent):
+    if log_msg_rule:
+        group_id = event.group_id
+        message_id = event.message_id
+        data.recall_log(group_id, message_id)
+
+    
 async def get_attr(name: str, user_id: str, item: str) -> str:
     attrs = Attribute(data.get_card(user_id).skills).attrs
     status: int = attrs.get(utils.get_alias(item))
@@ -111,8 +132,8 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
         result: str = RD(name, msg)
     else:
         result = RD(name, matches.group(), msg.replace(matches.group(), ""))
-
-    join_log_msg(data, event, result)  # JOIN LOG MSG
+    
+    join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
     await matcher.finish(result)
 
@@ -144,7 +165,7 @@ async def roll_single_handle(matcher: Matcher, event: MessageEvent, name: str = 
     else:
         result = RD(name, matches.group(), msg.replace(matches.group(), ""))
 
-    join_log_msg(data, event, result)  # JOIN LOG MSG
+    join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
     await matcher.finish(result)
 
@@ -163,6 +184,7 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
     """
 
     user_id: int = event.user_id
+    print(f"roll_card_handle中的user_id：{user_id}，此时log正在记录的群组：{LOG_ON_LIST_TEMP}")
     msg = get_msg(event, 3)
     # 正则匹配
     PBCls: int = 0
@@ -190,7 +212,7 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
         else:
             result = RA(name, match_item.group(), None, card, PBCls)
 
-    join_log_msg(data, event, result)  # JOIN LOG MSG
+    join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
     await matcher.finish(result)
 
@@ -209,8 +231,10 @@ async def make_card_handle(matcher: Matcher, event: GroupMessageEvent, name: str
     if match_item is not None:
         msg_clr_show = match_item.group()
         if msg_clr_show == 'clear':
-            data.delete_card(user_id)
-            await matcher.finish("已清除您的数据！")
+            if data.delete_card(user_id):
+                await matcher.finish("已清除您的数据！")
+            else:
+                await matcher.finish(DB_ERROR_MSG)
         if msg_clr_show.startswith("show"):
             item : str = msg.replace("show","")
             await matcher.finish(await get_attr(name, user_id, item))
@@ -237,37 +261,97 @@ async def log_handle(matcher: Matcher, event: GroupMessageEvent, bot: Bot):
     """
     日志相关指令
     """
-    '''
     msg: str = get_msg(event, 4)
     group_id: int = event.group_id
+    reply: str = ""
     if msg.startswith("new"):
-        file_name = search(r"(?<=new ).*", msg).group()
-        data.create_log(group_id, file_name)
-        await matcher.finish("已创建记录日志<{file_name}>")
+        pattern = r"(?<=new).*"
+        file_name_search = search(pattern, msg)
+        if file_name_search:
+            file_name = file_name_search.group()
+        else:
+            file_name = "NEW"
+        status, file_name = data.create_log(group_id, file_name) # 0：失败，1：成功，2：记录已存在且开始，3：记录已存在且未开始, 4:已结束，确认是否要覆盖
+        match status:
+            case 0:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+            case 1:
+                reply = f"已创建记录日志<{file_name}>"
+            case 2:
+                reply = f"当前记录<{file_name}>已存在且正在进行中"
+            case 3:
+                reply = f"当前记录<{file_name}>已存在"
+            case 4:
+                reply = f"存在历史记录<{file_name}>，如需覆写请再次发送指令。"
+            case _:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+        await matcher.finish(reply)
+
     if msg.startswith("on"):
-        data.open_log(group_id)
-        await matcher.finish(f"已开启记录日志<{file_name}>")
+        status = data.open_log(group_id) #返回值：0：失败，1：成功，2：记录已开始，3：记录不存在或已结束
+        match status:
+            case 0:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+            case 1:
+                reply = f"已开启记录日志"
+                LOG_ON_LIST_TEMP.append(group_id)
+            case 2:
+                reply = f"日志正在记录中，请勿重复开始。"
+            case 3:
+                reply = f"记录不存在或已结束"
+            case _:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+        await matcher.finish(reply)
+
     if msg.startswith("off"):
-        data.close_log(group_id)
-        await matcher.finish("已暂停记录日志")
+        status, file_name = data.close_log(group_id) #返回值：0：失败，1：成功，2：记录未开始，3：记录不存在或已结束
+        match status:
+            case 0:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+            case 1:
+                reply = f"已暂停记录<{file_name}>"
+                LOG_ON_LIST_TEMP.remove(group_id)
+            case 2:
+                reply = f"记录还未开始，无需暂停"
+            case 3:
+                reply = f"记录不存在或已结束"
+            case _:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+        await matcher.finish(reply)
+
     if msg.startswith("end"):
-        with open(plugin_config.cache_file, 'w', encoding='utf-8') as f:
-            for i in data.get_log(group_id).msg:
-                f.write(f"{i}\n")
-        file_path: str = Path(plugin_config.cache_file).absolute().as_posix()
+        status, file_name = data.end_log(group_id) #返回值：0：失败，1：成功，2：记录不存在
+        match status:
+            case 0:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+            case 1:
+                reply = f"已结束记录<{file_name}>。可通过.log upload上传群文件。"
+                if group_id in LOG_ON_LIST_TEMP:
+                    LOG_ON_LIST_TEMP.remove(group_id)
+            case 2:
+                reply = f"记录不存在，请先发送.log new [name]创建log"
+            case _:
+                reply = f"状态[{status}]{DB_ERROR_MSG}"
+        await matcher.finish(reply)
+
+    if msg.startswith("upload"):
+        file_name, file_path = data.get_log(group_id)
+        if not file_name:
+            await matcher.finish("LOG文件上传失败！请检查是否存在LOG。")
         try:
-            await bot.upload_group_file(group_id=group_id, file=file_path, name=f'logs-{event.message_id}.txt')
+            await bot.upload_group_file(group_id=group_id, file=file_path, name=file_name)
         except:
             await matcher.finish("上传群文件失败，请检查权限。")
-        await matcher.finish("已上传至群文件")
-    if msg == 'clear':
-        data.delete_log(group_id)
-        await matcher.finish("已清除此群之前的所有日志信息")
-    else:
-        await matcher.finish("log指令为.log new [log名] / .log on / .log off / .log end 请认指令是否正确。")
+        await matcher.finish(f"{file_name}已上传至群文件")
 
-    '''
-    await matcher.finish("log功能维护中...")
+    if msg == 'clear':
+        if data.delete_log(group_id):
+            await matcher.finish("已清除此群之前的所有日志信息")
+        else:
+            await matcher.finish(DB_ERROR_MSG)
+    else:
+        await matcher.finish("log指令为.log+new[name]/on/off/end/upload/clear\n 请认指令是否正确。")
+
 
 @sancheck.handle()
 async def sancheck_handle(matcher: Matcher, event: MessageEvent):
@@ -287,7 +371,7 @@ async def sancheck_handle(matcher: Matcher, event: MessageEvent):
     data.set_card(user_id, attr.set(
         "san", attr.get("san") - drop_san).to_str())
 
-    join_log_msg(data, event, result)  # JOIN LOG MSG
+    join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
     await matcher.finish(result)
 
@@ -297,10 +381,7 @@ async def log_msg_handle(event: GroupMessageEvent):
     """
     记录群聊信息
     """
-    group_id: int = event.group_id
-    msg: str = event.message.extract_plain_text()
-    name: str = get_name(event)
-    data.log_add(group_id, f'[{name}] {msg}')
+    join_log_msg(data, event)  # JOIN LOG MSG
 
 
 @roll_p.handle()
@@ -313,7 +394,7 @@ async def private_roll_handle(matcher: Matcher, event: GroupMessageEvent, bot: B
     result: str = RD(name, msg)
 
     await bot.send_private_msg(user_id=event.user_id, message=result)
-    join_log_msg(data, event, result)
+    join_log_bot_msg(data, event, f"{name} 进行了一次暗骰~ {result}", LOG_ON_LIST_TEMP)
 
     await matcher.finish(f"{name} 进行了一次暗骰~")
 
@@ -359,7 +440,9 @@ async def get_temp_insane(event: MessageEvent, matcher: Matcher):
         msg = f"10) 躁狂症状-> {choice(crazy_list)},持续{random('1d10')}轮"
     else:
         msg = crazy_temp[result-1]
-    await matcher.finish(msg.replace("1D10", str(random("1d10"))))
+    msg.replace("1D10", str(random("1d10")))
+    join_log_bot_msg(data, event, msg, LOG_ON_LIST_TEMP)
+    await matcher.finish(msg)
 
 
 @forever_insane.handle()
@@ -374,6 +457,8 @@ async def get_forever_insane(event: MessageEvent, matcher: Matcher):
         msg = f"10) 躁狂症状->{choice(crazy_list)}"
     else:
         msg = crazy_forever[result-1]
+    msg.replace("1D10", str(random("1d10")))
+    join_log_bot_msg(data, event, msg, LOG_ON_LIST_TEMP)
     await matcher.finish(msg.replace("1D10", str(random("1d10"))))
 
 
@@ -419,4 +504,6 @@ async def improve_self(event: MessageEvent, matcher: Matcher,name: str = Depends
         result: int = random(matches.group()) 
         user_id: int = event.user_id
         data.set_card(user_id, Attribute(data.get_card(user_id).skills).add(item, result).to_str())
-        await matcher.finish(f"{name} 对 {item} 理解提升了 {result} !")
+        msg = f"{name} 对 {item} 理解提升了 {result} !"
+        join_log_bot_msg(data, event, msg, LOG_ON_LIST_TEMP)
+        await matcher.finish(msg)

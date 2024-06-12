@@ -30,7 +30,7 @@ def RD(player_name: Optional[str], statement: str = '1d100', item: str = '', ) -
         item: Optional[str] 检定技能
         statement: str = '1d100' [onedice]骰子检定公式
 
-    Return:
+    Return:git
         str 检定后信息
     """
     statement = '1d100' if statement in ['1d', '1', ''] else statement

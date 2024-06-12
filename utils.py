@@ -1,9 +1,10 @@
-from re import findall
+from datetime import datetime
+from re import findall, match
 from typing import Dict, Tuple
 from typing_extensions import Self
 from nonebot.adapters.onebot.v11 import MessageEvent, GroupMessageEvent
 
-from .model import DataContainer
+from .model import DataContainer, LogContents
 
 
 #将录卡的属性全部统一为第一个值
@@ -124,12 +125,47 @@ def get_alias(attr: str) -> bool:
             return ALIAS_DICT[attr]
         return attr
 
-def join_log_msg(data: DataContainer, event: MessageEvent, msg: str):
+def image_in_msg(event: GroupMessageEvent):
+    for seg in event.message:
+        if seg.type == "image":
+            return True
+    return False
+
+def join_log_msg(data: DataContainer, event: MessageEvent):
     """拼接日志消息"""
     if isinstance(event, GroupMessageEvent):
         group_id = event.group_id
-        if data.is_logging(group_id):
-            data.log_add(group_id, msg)
+        if not image_in_msg(event):
+            logs = LogContents(
+                event.sender.user_id, #QQ号
+                get_name(event), #用户群昵称
+                # p_name = event, #角色名  未实装
+                event.message.extract_plain_text(), #消息内容
+                bool(match(r"^[\(\（]", event.message.extract_plain_text().replace(' ', ''))), #消息是否为以(（开始的内容
+                datetime.fromtimestamp(event.time), #消息时间
+                # log.u_cls = [数据库用户表查询返回值] #用户区分 0：骰娘本体 1：KP 2：PC 3：闲杂人等  未实装
+                event.message_id #消息ID
+            )
+            data.log_add(group_id, logs)
+
+def join_log_bot_msg(data: DataContainer, event: MessageEvent, msg: str, permitList: list):
+    """拼接日志消息"""
+    if isinstance(event, GroupMessageEvent):
+        group_id = event.group_id
+        if group_id in permitList:
+            logs = LogContents(
+                #event.sender.user_id, 
+                event.self_id, #Bot QQ号
+                "骰娘", #用户群昵称
+                # p_name = event, #角色名  未实装
+                #event.message.extract_plain_text(), #消息内容
+                msg, #消息内容
+                False, #消息是否为以(（开始的内容
+                datetime.fromtimestamp(event.time), #消息时间
+                # log.u_cls = [数据库用户表查询返回值] #用户区分 0：骰娘本体 1：KP 2：PC 3：闲杂人等  未实装
+                event.message_id #消息ID
+            )
+            data.log_add(group_id, logs)
 
 
 def get_name(event: MessageEvent) -> str:

@@ -4,8 +4,9 @@
 """
 
 from enum import Enum
-from random import randint
 from typing import Any, Optional, Union
+
+from .prandom import random
 
 
 class TokenType(Enum):
@@ -152,7 +153,7 @@ class Parser:
 
     def _random(self, start: int = 1, end: int = 100) -> int:
         """随机数"""
-        return randint(start, end)
+        return random(start, end)
 
     def expr(self) -> Union[int, float]:
         """expr ::= expr | expr '+' term  | expr '-' term  | term"""
