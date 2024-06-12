@@ -191,7 +191,7 @@ class DataContainer:
                             file_name = logFile.name
                             status = 3  # 3：记录已存在且未开始
                 else:
-                    newLog = GroupLOG(group_id=group_id)
+                    newLog = GroupLOG(group_id=group_id, name=file_name)
                     session.add(newLog)
                     session.commit()
                     status = 1
