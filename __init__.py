@@ -5,7 +5,7 @@ from typing import Dict, Union
 from nonebot import get_plugin_config
 from nonebot.params import Depends
 from nonebot.matcher import Matcher
-from nonebot.plugin import on_regex, on_message, on_notice, PluginMetadata
+from nonebot.plugin import on_regex, on_message, on_notice, PluginMetadata, on_fullmatch
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, GROUP_ADMIN, GROUP_OWNER, MessageEvent, Bot, GroupRecallNoticeEvent
 
 from .model import DataContainer
@@ -48,13 +48,14 @@ DB_ERROR_MSG = "数据处理错误！请联系管理员QQ:623749594"
 log = on_regex(r"^[。.]log", permission=MANAGER, priority=5)  # 日志相关指令
 help = on_regex(r"^[。.]help", priority=5)  # 帮助
 #骰点相关
-roll = on_regex(r"^[。.]r\d", priority=5)  # roll点
+roll = on_fullmatch([".r","。r"]) # roll点
+roll_d = on_regex(r"^[。.]r\d", priority=5)  # roll点
 roll_bonus = on_regex(r"^[。.]rb", priority=5)  # roll点
 roll_punish = on_regex(r"^[。.]rp", priority=5)  # roll点
 roll_single = on_regex(r"^[。.]rd", priority=5)  # roll点
 roll_card = on_regex(r"^[。.]r[abpc]", priority=4)  # 人物技能roll点
-sancheck = on_regex(r"^[。.]sc", priority=5)  # 理智检定
 roll_p = on_regex(r"^[。.]rh", priority=4)  # 暗骰
+sancheck = on_regex(r"^[。.]sc", priority=5)  # 理智检定
 #人物卡相关
 card = on_regex(r"^[。.]st", priority=5)  # 人物卡录入
 show = on_regex(r"^[。.]show", priority=5)  # 展示人物卡
@@ -105,6 +106,8 @@ async def get_attr_int(user_id: str, item: str) -> int:
     status = status if status is not None else status
     return status
 
+
+@roll_d.handle()
 @roll.handle()
 async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
     """
