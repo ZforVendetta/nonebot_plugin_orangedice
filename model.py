@@ -103,7 +103,6 @@ class DataContainer:
 
     def get_card(self, user_id: int) -> Player:
         with self.Session() as session:
-            print(f"get_card:user_id:{user_id}")
             statement = select(Player).where(Player.user_id == user_id)
             player = session.execute(statement).scalars().first()
             if player:
@@ -379,7 +378,6 @@ class DataContainer:
                 table_name = f"GROUP_{group_id}_LOG"
                 sql_text = f"UPDATE {table_name} SET del_flag = 1 WHERE msg_id = {message_id}"
                 connection.execute(text(sql_text))
-                print("撤回了一条消息")
             except SQLAlchemyError as e:
                 print(f"An error occurred while calling recall_log: {e}")
             

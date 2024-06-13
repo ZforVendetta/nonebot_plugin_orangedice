@@ -130,7 +130,6 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
     msg: str = get_msg(event, 2)
     matches: Union[Match[str], None] = search(
         r"(\d|[d|a|k|q|p|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
-    print(f"matches")
     if matches is None:
 
         result: str = RD(name, msg)
@@ -162,7 +161,6 @@ async def roll_single_handle(matcher: Matcher, event: MessageEvent, name: str = 
     msg: str = "1" + get_msg(event, 2)
     matches: Union[Match[str], None] = search(
         r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
-    print(f"matches")
     if matches is None:
 
         result: str = RD(name, msg)
@@ -188,7 +186,6 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
     """
 
     user_id: int = event.user_id
-    print(f"roll_card_handle中的user_id：{user_id}，此时log正在记录的群组：{LOG_ON_LIST_TEMP}")
     msg = get_msg(event, 3)
     # 正则匹配
     PBCls: int = 0
