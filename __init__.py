@@ -17,7 +17,7 @@ from .roll import COC, RA, RD, SC, random, RA_NUM
 __plugin_meta__ = PluginMetadata(
     name="orange_dice",
     description="具有技能鉴定、人物卡、日志记录的COC用插件",
-    usage="欢迎使用本骰娘,本bot为Romuuu私人搭建仅用于亲友跑团,请勿滥用~\n"
+    usage="本bot为Romuuu私人搭建仅用于亲友跑团,请勿滥用~\n"
     ".r[expr]([attr]) 骰点\n"
     ".ra[attr]([value]) 属性骰点\n"
     ".rp[attr] 惩罚属性骰点\n"
@@ -25,17 +25,18 @@ __plugin_meta__ = PluginMetadata(
     ".rc[attr] 标准规则书属性骰点\n"
     ".st[attr][value]/clear 卡录/清除\n"
     ".st show [attr] 展示单个属性\n"
-    ".log (new[name]/on/off/end/upload/clear) 日志功能开启/关闭/上传/清除(维护中)\n"
+    ".log (new[name]/on/off/end/upload/clear) 日志功能开启/关闭/上传/清除\n"
     ".sc[success]/[failure] ([san]) 理智检定[不可使用除法]\n"
     ".rh 暗骰\n"
     ".show 展示全部属性\n"
     ".ti/li 临时/永久疯狂检定\n"
     ".coc5/coc10 生成5/10个coc人物卡\n"
     ".en[attr][expr] 属性成长\n"
-    "基于GitHub-BigOrangeQWQ:nonebot_plugin_orangedice\n",
+    "ZforVendetta/nonebot_plugin_orangedice\n"
+    "forked from BigOrangeQWQ/nonebot_plugin_orangedice\n",
     type="application",
     config=Config,
-    homepage="https://github.com/BigOrangeQWQ/nonebot_plugin_orangedice",
+    homepage="https://github.com/ZforVendetta/nonebot_plugin_orangedice",
     supported_adapters={"~onebot.v11"},
     extra={}
 )
