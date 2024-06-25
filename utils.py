@@ -125,17 +125,18 @@ def get_alias(attr: str) -> bool:
             return ALIAS_DICT[attr]
         return attr
 
-def image_in_msg(event: GroupMessageEvent):
+def msg_is_image(event: GroupMessageEvent):
     for seg in event.message:
-        if seg.type == "image":
-            return True
-    return False
+        if seg.type != "image" and seg.type != "face":
+            return False
+    return True
 
 def join_log_msg(data: DataContainer, event: MessageEvent):
     """拼接日志消息"""
     if isinstance(event, GroupMessageEvent):
         group_id = event.group_id
-        if not image_in_msg(event):
+        #msg = image_in_msg(event)
+        if not msg_is_image(event):
             logs = LogContents(
                 event.sender.user_id, #QQ号
                 get_name(event), #用户群昵称

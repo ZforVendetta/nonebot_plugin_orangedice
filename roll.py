@@ -62,33 +62,34 @@ def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[st
         PubResult: int = random("1d10")
         exMsg = f"(奖励骰:{result}/{PubResult})"
         result = min(result // 10, PubResult) * 10 + result % 10 
-    elif PBCls == 2: #Publish
+    elif PBCls == 2: #Punish
         PubResult: int = random("1d10")
         exMsg = f"(惩罚骰:{result}/{PubResult})"
         result = max(result // 10, PubResult) * 10 + result % 10
         result = 100 if result > 100 else result
     elif PBCls == 3: #standard rule
-        if ((result > 95 and attrs < 50) or result == 10):
+        if ((result > 95 and attrs < 50) or result == 100):
             msg = "大失败~"
-        if (result <= attrs):
-            msg = '成功！'
-        if (result <= attrs*0.5):
-            msg = '困难成功！'
-        if (result <= attrs*0.2):
-            msg = "极难成功！"
-        if (result == 1):
+        elif (result == 1):
             msg = "大成功！！"
-        return f"{player_name}的[{item}]标准规则检定结果:D100={result}/{attrs} {msg}"
+        elif (result <= attrs*0.2):
+            msg = "极难成功！"
+        elif (result <= attrs*0.5):
+            msg = '困难成功！'
+        elif (result <= attrs):
+            msg = '成功！'
+        exMsg = f"(标准规则)"
+        return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
     if (result > 96):
         msg = "大失败~"
-    if (result <= attrs):
-        msg = '成功！'
-    if (result <= attrs*0.5):
-        msg = '困难成功！'
-    if (result <= attrs*0.2):
-        msg = "极难成功！"
-    if (result < 4):
+    elif (result < 4):
         msg = "大成功！！"
+    elif (result <= attrs*0.2):
+        msg = "极难成功！"
+    elif (result <= attrs*0.5):
+        msg = '困难成功！'
+    elif (result <= attrs):
+        msg = '成功！'
     return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
 
 def RA_NUM(player_name: str, attr: int) -> str:
@@ -107,14 +108,14 @@ def RA_NUM(player_name: str, attr: int) -> str:
     msg = '失败~'
     if (result > 96):
         msg = "大失败~"
-    if (result <= attrs):
-        msg = '成功！'
-    if (result <= attrs*0.5):
-        msg = '困难成功！'
-    if (result <= attrs*0.2):
-        msg = "极难成功！"
-    if (result < 4):
+    elif (result < 4):
         msg = "大成功！！"
+    elif (result <= attrs*0.2):
+        msg = "极难成功！"
+    elif (result <= attrs*0.5):
+        msg = '困难成功！'
+    elif (result <= attrs):
+        msg = '成功！'
     return f"{player_name}的检定结果:D100={result}/{attrs} {msg}"
 
 def SC(player_name: str , san: int, fdice: str, sdice: str) -> Tuple[str, int]:

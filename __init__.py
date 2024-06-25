@@ -51,9 +51,7 @@ help = on_regex(r"^[。.]help", priority=5)  # 帮助
 #骰点相关
 roll = on_fullmatch([".r","。r"]) # roll点
 roll_d = on_regex(r"^[。.]r\d", priority=5)  # roll点
-roll_bonus = on_regex(r"^[。.]rb", priority=5)  # roll点
-roll_punish = on_regex(r"^[。.]rp", priority=5)  # roll点
-roll_single = on_regex(r"^[。.]rd", priority=5)  # roll点
+#roll_single = on_regex(r"^[。.]rd", priority=5)  # roll点
 roll_card = on_regex(r"^[。.]r[abpc]", priority=4)  # 人物技能roll点
 roll_p = on_regex(r"^[。.]rh", priority=4)  # 暗骰
 sancheck = on_regex(r"^[。.]sc", priority=5)  # 理智检定
@@ -129,7 +127,7 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
     """
     msg: str = get_msg(event, 2)
     matches: Union[Match[str], None] = search(
-        r"(\d|[d|a|k|q|p|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
+        r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
     if matches is None:
 
         result: str = RD(name, msg)
@@ -140,36 +138,36 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
 
     await matcher.finish(result)
 
-@roll_single.handle()
-async def roll_single_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
-    """
-    处理单次骰点检定
+# @roll_single.handle()
+# async def roll_single_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
+#     """
+#     处理单次骰点检定
 
-    Example:
-        [in].rd测试
-        RD('测试','PlayerName','1D100')
-        [out]进行了[测试]检定1D100=result
+#     Example:
+#         [in].rd测试
+#         RD('测试','PlayerName','1D100')
+#         [out]进行了[测试]检定1D100=result
 
-        [in].r
+#         [in].r
 
-        RD('PlayerName',None, '')
-        [out]进行了检定1D100=result
+#         RD('PlayerName',None, '')
+#         [out]进行了检定1D100=result
 
-        [in].rd测试50
-        [error out]进行了检定1D100=0
-    """
-    msg: str = "1" + get_msg(event, 2)
-    matches: Union[Match[str], None] = search(
-        r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
-    if matches is None:
+#         [in].rd测试50
+#         [error out]进行了检定1D100=0
+#     """
+#     msg: str = "1" + get_msg(event, 2)
+#     matches: Union[Match[str], None] = search(
+#         r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
+#     if matches is None:
 
-        result: str = RD(name, msg)
-    else:
-        result = RD(name, matches.group(), msg.replace(matches.group(), ""))
+#         result: str = RD(name, msg)
+#     else:
+#         result = RD(name, matches.group(), msg.replace(matches.group(), ""))
 
-    join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
+#     join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
-    await matcher.finish(result)
+#     await matcher.finish(result)
 
 @roll_card.handle()
 async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
