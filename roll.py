@@ -3,7 +3,7 @@
 """
 from typing import Optional, Dict, Tuple
 
-from .dice import Lexer, Parser
+from .dice import process_command
 from .utils import get_alias
     
 
@@ -17,106 +17,47 @@ def random(statement: str = '1d100') -> int:
     Returns:
         int: 骰点后结果
     """
-    return int(Parser(Lexer(statement)).parse())
+    dice, _, _ = process_command(statement)
+    return dice
 
-
-
-def RD(player_name: Optional[str], statement: str = '1d100', item: str = '', ) -> str:
-    """
-    进行骰点并返回骰点消息
-
-    Args:
-        player_name: Optional[str] 玩家名字
-        item: Optional[str] 检定技能
-        statement: str = '1d100' [onedice]骰子检定公式
-
-    Return:git
-        str 检定后信息
-    """
-    statement = '1d100' if statement in ['1d', '1', ''] else statement
-    result = random(statement)
-    item = f'[{item}]' if item != '' else ''
-    return f"{player_name}的{item}投掷结果：{statement.upper()}={result}"
-
-
-def RA(player_name: Optional[str], item: str, attr: Optional[int], card: Dict[str, int], PBCls: int) -> str:
-    """进行检定并返回骰点信息
-
-    Args:
-        player_name (str): 玩家名字
-        user_id (int): QQ号
-        item (str): 检定技能
-        attr (int): 技能值
-
-    Returns:
-        str: 检定后信息
-    """
-    attrs: int = card.get(get_alias(item), 0)
-    attrs = attr if attr is not None else attrs
-    if (attrs == 0):
-        return f'{player_name}没有这个属性'
-    result: int = random()
-    msg = '失败~'
-    exMsg: str = ""
-    if PBCls == 1: #Bonus
-        PubResult: int = random("1d10")
-        exMsg = f"(奖励骰:{result}/{PubResult})"
-        result = min(result // 10, PubResult) * 10 + result % 10 
-    elif PBCls == 2: #Punish
-        PubResult: int = random("1d10")
-        exMsg = f"(惩罚骰:{result}/{PubResult})"
-        result = max(result // 10, PubResult) * 10 + result % 10
-        result = 100 if result > 100 else result
-    elif PBCls == 3: #standard rule
-        if ((result > 95 and attrs < 50) or result == 100):
+def checkDice(dice: int, diceCls: str, attrs: int):
+    msg = "失败~"
+    if diceCls == "c": #标准规则书
+        if ((dice > 95 and attrs < 50) or dice == 100):
             msg = "大失败~"
-        elif (result == 1):
+        elif (dice == 1):
             msg = "大成功！！"
-        elif (result <= attrs*0.2):
+        elif (dice <= attrs*0.2):
             msg = "极难成功！"
-        elif (result <= attrs*0.5):
+        elif (dice <= attrs*0.5):
             msg = '困难成功！'
-        elif (result <= attrs):
+        elif (dice <= attrs):
             msg = '成功！'
-        exMsg = f"(标准规则)"
-        return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
-    if (result > 96):
-        msg = "大失败~"
-    elif (result < 4):
-        msg = "大成功！！"
-    elif (result <= attrs*0.2):
-        msg = "极难成功！"
-    elif (result <= attrs*0.5):
-        msg = '困难成功！'
-    elif (result <= attrs):
-        msg = '成功！'
-    return f"{player_name}的[{item}]检定结果:D100={result}/{attrs} {msg}{exMsg}"
+    elif diceCls in ["a","p","b"]:
+        if (dice > 96):
+            msg = "大失败~"
+        elif (dice < 4):
+            msg = "大成功！！"
+        elif (dice <= attrs*0.2):
+            msg = "极难成功！"
+        elif (dice <= attrs*0.5):
+            msg = '困难成功！'
+        elif (dice <= attrs):
+            msg = '成功！'
+    return msg
 
-def RA_NUM(player_name: str, attr: int) -> str:
-    """进行数字检定并返回骰点信息
-
-    Args:
-        player_name (str): 玩家名字
-        user_id (int): QQ号
-        attr (int): 技能值
-
-    Returns:
-        str: 检定后信息
-    """
-    attrs: int = attr
-    result: int = random()
-    msg = '失败~'
-    if (result > 96):
-        msg = "大失败~"
-    elif (result < 4):
-        msg = "大成功！！"
-    elif (result <= attrs*0.2):
-        msg = "极难成功！"
-    elif (result <= attrs*0.5):
-        msg = '困难成功！'
-    elif (result <= attrs):
-        msg = '成功！'
-    return f"{player_name}的检定结果:D100={result}/{attrs} {msg}"
+def TEST_R(player_name: Optional[str], item: Optional[str], card: Optional[Dict[str, int]], cmd: str):
+    dice, diceCls, exMsg = process_command(cmd)
+    if diceCls != 'd':
+        attrs: int = card.get(get_alias(item), 0)
+        if (attrs == 0):
+            return f'{player_name}没有这个属性'
+        else:
+            msg = checkDice(dice, diceCls, attrs)
+            return f"{player_name}的检定结果:D100={dice}/{attrs} {msg}{exMsg}"
+    else:
+        return f"{player_name}的检定结果:{exMsg}={dice}。"
+        
 
 def SC(player_name: str , san: int, fdice: str, sdice: str) -> Tuple[str, int]:
     """理智检定返回骰点信息
@@ -142,14 +83,16 @@ def COC() -> str:
     Returns:
         str: 角色卡信息
     """
-    STR = random('3d6')*5
-    CON = random('3d6')*5
-    SIZ = random('2d6+1d8')*5
-    DEX = random('3d6')*5
-    APP = random("3d6")*5
-    INT = random("2d6+6")*5
-    EDU = random("2d6+6")*5
-    POW = random("2d6+1d8")*5
-    LUC = random("3d6")*5
+    STR = random('3d6*5')
+    CON = random('3d6*5')
+    SIZ = random('2d6+1d8*5')
+    DEX = random('3d6*5')
+    APP = random("3d6*5")
+    INT = random("2d6+6*5")
+    EDU = random("2d6+6*5")
+    POW = random("2d6+1d8*5")
+    LUC = random("3d6*5")
     SUM = STR+CON+SIZ+DEX+APP+INT+EDU+POW
-    return f"力量{STR}体质{CON}体型{SIZ}敏捷{DEX}外貌{APP}智力{INT}教育{EDU}意志{POW}幸运{LUC},共计{SUM}/{SUM+LUC}"
+    PER1 = '{:.0f}%'.format(SUM/650*100)
+    PER2 = '{:.0f}%'.format((SUM+LUC)/730*100)
+    return f"力量{STR}体质{CON}体型{SIZ}敏捷{DEX}外貌{APP}智力{INT}教育{EDU}意志{POW}幸运{LUC},共计{SUM}/{SUM+LUC}({PER1}/{PER2})"

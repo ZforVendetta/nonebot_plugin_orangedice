@@ -12,7 +12,8 @@ from .model import DataContainer
 from .utils import Attribute, get_msg, join_log_msg, join_log_bot_msg, get_name
 from .message import fear_list, crazy_forever, crazy_list, crazy_temp
 from .config import Config
-from .roll import COC, RA, RD, SC, random, RA_NUM
+#from .roll import COC, RA, RD, SC, random, RA_NUM
+from .roll import COC, SC, random, TEST_R
 
 __plugin_meta__ = PluginMetadata(
     name="orange_dice",
@@ -49,10 +50,9 @@ DB_ERROR_MSG = "数据处理错误！请联系管理员QQ:623749594"
 log = on_regex(r"^[。.]log", permission=MANAGER, priority=5)  # 日志相关指令
 help = on_regex(r"^[。.]help", priority=5)  # 帮助
 #骰点相关
-roll = on_fullmatch([".r","。r"]) # roll点
-roll_d = on_regex(r"^[。.]r\d", priority=5)  # roll点
+roll_single = on_fullmatch([".r","。r"]) # roll点
 #roll_single = on_regex(r"^[。.]rd", priority=5)  # roll点
-roll_card = on_regex(r"^[。.]r[abpc]", priority=4)  # 人物技能roll点
+roll = on_regex(r"^[。.]r[adbpc\d+]", priority=4)  # 人物技能roll点
 roll_p = on_regex(r"^[。.]rh", priority=4)  # 暗骰
 sancheck = on_regex(r"^[。.]sc", priority=5)  # 理智检定
 #人物卡相关
@@ -106,8 +106,7 @@ async def get_attr_int(user_id: str, item: str) -> int:
     return status
 
 
-@roll_d.handle()
-@roll.handle()
+@roll_single.handle()
 async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
     """
     处理骰点检定
@@ -125,14 +124,7 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
         [in].rd测试50
         [error out]进行了检定1D100=0
     """
-    msg: str = get_msg(event, 2)
-    matches: Union[Match[str], None] = search(
-        r"(\d|[d|\d?\d?\d?\d?|+|\-|\*|\/|\(|\)|x]){1,1000}", msg)  # 匹配骰子公式
-    if matches is None:
-
-        result: str = RD(name, msg)
-    else:
-        result = RD(name, matches.group(), msg.replace(matches.group(), ""))
+    result = TEST_R(name, None, None, "d")
     
     join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
@@ -169,7 +161,7 @@ async def roll_handle(matcher: Matcher, event: MessageEvent, name: str = Depends
 
 #     await matcher.finish(result)
 
-@roll_card.handle()
+@roll.handle()
 async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = Depends(get_name)):
     """处理玩家属性骰点
 
@@ -184,32 +176,12 @@ async def roll_card_handle(matcher: Matcher, event: MessageEvent, name: str = De
     """
 
     user_id: int = event.user_id
+    cmd = get_msg(event, 2)
     msg = get_msg(event, 3)
-    # 正则匹配
-    PBCls: int = 0
-    if get_msg(event, 2).startswith("b"):
-        PBCls = 1
-    elif get_msg(event, 2).startswith("p"):
-        PBCls = 2
-    elif get_msg(event, 2).startswith("c"):
-        PBCls = 3
-    match_item = search(r"\D{1,100}", msg)  # 搜索 测试
-
-    if match_item is None:
-        match_num = search(r"\d{1,3}", msg)
-        if match_num is not None:
-            result = RA_NUM(name, int(match_num.group()))
-        else:
-            await matcher.finish('没有找到需要检定的属性')
-    else:
-        card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
-        match_num = search(r"\d{1,3}", msg.replace(
-            match_item.group(), ""))  # 搜索 测试100
-        if match_num is not None:
-            result = RA(name, match_item.group(),
-                        int(match_num.group()), card, PBCls)
-        else:
-            result = RA(name, match_item.group(), None, card, PBCls)
+    match_item = search(r"\D+", msg)  # 搜索 属性
+    
+    card: Dict[str, int] = Attribute(data.get_card(user_id).skills).attrs
+    result = TEST_R(name, None if not match_item else match_item.group(), card, cmd)
 
     join_log_bot_msg(data, event, result, LOG_ON_LIST_TEMP)  # JOIN LOG MSG
 
@@ -388,9 +360,9 @@ async def private_roll_handle(matcher: Matcher, event: GroupMessageEvent, bot: B
     """
     1D100暗骰指令
     """
-    msg: str = get_msg(event, 3)
+    msg: str = get_msg(event, 3) if get_msg(event, 3) else 'd'
     name: str = get_name(event)
-    result: str = RD(name, msg)
+    result: str = TEST_R(name, None, None, msg)
 
     await bot.send_private_msg(user_id=event.user_id, message=result)
     join_log_bot_msg(data, event, f"{name} 进行了一次暗骰~ {result}", LOG_ON_LIST_TEMP)
@@ -466,14 +438,17 @@ async def create_coc_role(event: MessageEvent, matcher: Matcher):
     """
     创建人物卡
     """
+    result = []
     value: Union[str, int] = get_msg(event, 4)
     if value== "":
         value = 1
     value = int(value)
     if value > 10:
         value = 10
-    # 10连保底
-    await matcher.finish("\n".join([COC() for i in range(value)]))
+    for i in range(value):
+        result.append(f"#{i+1}:{COC()}")
+    
+    await matcher.finish("\n".join(result))
 
 
 @help.handle()

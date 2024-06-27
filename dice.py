@@ -1,288 +1,142 @@
-"""
-写的很不好，欢迎PR
-参考BLOG:https://ruslanspivak.com/lsbasi-part1/
-"""
-
-from enum import Enum
-from typing import Any, Optional, Union
+import re
+import math
 
 from .prandom import random
 
-
-class TokenType(Enum):
-    """符号表枚举类"""
-    NUMBER = 'NUMBER'  # 123456789
-    PLUS = 'PLUS'  # +
-    MINUS = 'MINUS'  # -
-    MUL = 'MUL'  # *
-    DIV = 'DIV'  # /
-    LPAREN = 'LPAREN'  # (
-    RPAREN = 'RPAREN'  # )
-    DICE = 'DICE'  # d
-    DICE_POOL = 'DICE_POOL'  # 骰子池 a
-    DICE_LEVEL = 'DICE_LEVEL'  # 选取线 k/q
-    DICE_GIVE = 'DICE_GIVE'  # 奖惩 p/b
-    EOF = 'EOF'
-
-
-class Token:
-
-    def __init__(self, type: TokenType, value: Any) -> None:
-        self.value = value
-        self.type = type
-
-
-class Lexer:
-    """词法解析"""
-
-    def __init__(self, text: str) -> None:
-        self.text: str = text
-        self.loc: int = 0
-        self.cache: Optional[str] = self.text[self.loc]
-
-    def _advance(self):
-        """
-        前进并解析下一个token
-        """
-        self.loc += 1  # 前进一步
-        # self.cache = self.text[self.loc]
-        if self.loc > len(self.text) - 1:
-            self.cache = None
-        else:
-            self.cache = self.text[self.loc]
-
-    def _skip_whitespace(self):
-        """
-        跳过空格
-        """
-        while self.cache is not None and self.cache.isspace():
-            self._advance()
-
-    def _integer(self):
-        """
-        解析Int/Float并返回
-        """
-        result = ''
-        while self.cache is not None and self.cache.isdigit():
-            result += self.cache
-            self._advance()
-        return int(result)
-
-    def get_next(self) -> Token:
-        """
-        解析各类运算符
-        """
-        while self.cache is not None:
-            if self.cache.isspace():
-                self._skip_whitespace()
-                continue
-            if self.cache.isdigit():
-                return Token(TokenType.NUMBER, self._integer())
-            if self.cache == '+':
-                self._advance()
-                return Token(TokenType.PLUS, '+')
-            if self.cache == '-':
-                self._advance()
-                return Token(TokenType.MINUS, '-')
-            if self.cache == '*' or self.cache == 'x':
-                self._advance()
-                return Token(TokenType.MUL, '*')
-            if self.cache == '/':
-                self._advance()
-                return Token(TokenType.DIV, '/')
-            if self.cache == 'd':
-                self._advance()
-                return Token(TokenType.DICE, 'd')
-            if self.cache == 'k':
-                self._advance()
-                return Token(TokenType.DICE_LEVEL, 'k')
-            if self.cache == 'q':
-                self._advance()
-                return Token(TokenType.DICE_LEVEL, 'q')
-            if self.cache == 'a':
-                self._advance()
-                return Token(TokenType.DICE_POOL, 'a')
-            if self.cache == 'p':
-                self._advance()
-                return Token(TokenType.DICE_GIVE, 'p')
-            if self.cache == 'b':
-                self._advance()
-                return Token(TokenType.DICE_GIVE, 'b')
-            if self.cache == '(':
-                self._advance()
-                return Token(TokenType.LPAREN, '(')
-            if self.cache == ')':
-                self._advance()
-                return Token(TokenType.RPAREN, ')')
-            raise Exception(f"no this key-word: {self.cache}")
-        return Token(TokenType.EOF, None)
-
-
-class Parser:
-    """语法解析"""
-
-    def __init__(self, tokens: Lexer):
-        self.tokens = tokens
-        self.next_token: Token = Token(TokenType.EOF, None)
-        self.token: Token = Token(TokenType.EOF, None)
-        self._advance()  # 初始化
-
-    def _advance(self):
-        """获得下一个Token"""
-        self.token = self.next_token
-        self.next_token = self.tokens.get_next()
-
-    def _accept(self, type: TokenType) -> bool:
-        """
-        是否接收到指定类型的Token
-        接收到指定Token,前进一步
-        """
-        if self.next_token and self.next_token.type == type:
-            self._advance()  # 前进一步
-            return True
-        else:
-            return False
-
-    def _expect(self, type: TokenType):
-        """
-        指定下一个Token的类型为Type
-        若不为则丢出SyntaxError报错
-        """
-        if not self._accept(type):
-            raise SyntaxError(f'Expected {type.name}')
-
-    def _random(self, start: int = 1, end: int = 100) -> int:
-        """随机数"""
-        return random(start, end)
-
-    def expr(self) -> Union[int, float]:
-        """expr ::= expr | expr '+' term  | expr '-' term  | term"""
-        left = self.term()  # 左值
-        while self._accept(TokenType.PLUS) or self._accept(TokenType.MINUS):
-            op = self.token.type  # 获取运算 符
-            right = self.term()  # 获取右值
-            if op == TokenType.PLUS:
-                left += right
-            elif op == TokenType.MINUS:
-                left -= right
-        return left
-
-    def term(self) -> Union[int, float]:
-        """term ::= term | term '*' dice| term 'x' dice | term '/' dice | dice"""
-        left = self.dice()  # 左值
-        while self._accept(TokenType.MUL) or self._accept(TokenType.DIV):
-            op = self.token.type  # 获取运算 符
-            right = self.dice()  # 获取右值
-            if op == TokenType.MUL:
-                left *= right
-            elif op == TokenType.DIV:
-                left /= right
-        return left
-
-    def dice(self) -> Union[int, float]:
-        """
-        dice ::=  dice 'd' atom ['k'|'q'] atom ['p'|'b'] atom ['a'] atom | atom
-        """
-        left = result = self.atom()
-        while self._accept(TokenType.DICE):
-            right = self.atom()
-            _cache = [self._random(1, int(right))
-                    for i in range(0, int(left))]  # 储存骰子结果
-            result = 0
-            # 选取线 k大 q小
-            if self._accept(TokenType.DICE_LEVEL):
-                arg = int(self.atom())
-                if self.token.value == 'k':
-                    _cache.sort(reverse=True)
-                if self.token.value == 'q':
-                    _cache.sort()
-                for i in range(0, arg):
-                    result += _cache[i]
-            # 奖惩骰 p b
-            if self._accept(TokenType.DICE_GIVE):
-                arg = int(self.atom())
-                _cache = [self._random(1, 100) % 10]
-                _cache_list = [self._random(1, 10) for i in range(0, arg)]
-                if self.token.value == 'p':
-                    _cache_list.sort(reverse=True)
-                if self.token.value == 'b':
-                    _cache_list.sort()
-                return int(f'{_cache_list[0]}{_cache}')
-            # 骰池 a
-            if self._accept(TokenType.DICE_POOL):
-                arg = int(self.atom())
-                for i in _cache:
-                    if (i > arg):
-                        result += 1
-                return result
-            return sum(_cache)
-        return result
-
-    def atom(self) -> Union[float,int]:
-        """
-        atom ::= digit | ('+'|"-") atom | '(' expr ')'
-        """
-        if self._accept(TokenType.NUMBER):
-            return self.token.value
-        elif self._accept(TokenType.LPAREN):
-            exprval = self.expr()
-            self._expect(TokenType.RPAREN)
-            return exprval
-        else:
-            raise SyntaxError('Expected NUMBER or LPAREN')
-
-    def parse(self) -> Union[int, float]:
-        return self.expr()
-
-
-class AST:
-    ...
-
-
-class BinOP(AST):
-    def __init__(self, left: int, op: Token, right: int):
-        self.left = left
-        self.token = self.op = op
-        self.right = right
-
-
-class Num(AST):
-    def __init__(self, token: Token):
-        self.token = token
-        self.value: int = token.value
-
-
-class DiceOP(AST):
-    def __init__(self, left: int, op: Token, right: int, right2: Optional[Token],right3: Optional[Token], right4: Optional[Token]):
-        """骰子运算
-
-        Args:
-            left (int): A
-            op (Token): d|k|q|p|b|a
-            right (int): B
-            right2 (int): C
-            right3 (int): D
-            right4 (int): E
-        //maybe有更好的方案
-        """
-        self.left = left
-        self.token = self.op = op
-        self.right = right
-
-
-class Interpreter:
-    """解释器"""
+def roll_dice(dice_notation):
+    match = re.fullmatch(r'(\d+)?[Dd](\d+)?', dice_notation)
+    if not match:
+        raise ValueError(f"Invalid dice notation: {dice_notation}")
     
-    def visit(self, node ):
-        ...
+    count = int(match.group(1)) if match.group(1) else 1
+    sides = int(match.group(2)) if match.group(2) else 100
+    rolls = [random(1, sides) for _ in range(count)]
+    result = sum(rolls)
+    exMsg = f'{count}D{sides}'
+    return result, exMsg
+
+def process_expression(expression):
+    parts = re.split(r'(\s*[\+\-\*xX/]\s*)', expression)
+    
+    # 初始化总和
+    total, exMsg = roll_dice(parts[0].strip())
+    
+    # 遍历表达式的其余部分并计算总和
+    i = 1
+    while i < len(parts):
+        if i == 1:
+            exMsg += f'({total})'
+        operator = parts[i].strip()
+        next_part = parts[i + 1].strip()
+        if next_part.isdigit():
+            next_value = int(next_part)
+            next_exMsg = next_part
+        else:
+            next_value, next_exMsg = roll_dice(next_part)
+            next_exMsg += f'({next_value})'
+        
+        if operator == '+':
+            exMsg += '+'
+            total += next_value
+        elif operator == '-':
+            exMsg += '-'
+            total -= next_value
+        elif operator in ['*', 'x', 'X']:
+            exMsg += '*'
+            total *= next_value
+        elif operator == '/':
+            exMsg += '/'
+            total = math.ceil(total / next_value)
+        else:
+            print(next_exMsg)
+        exMsg += next_exMsg
+        i += 2
+    
+    return total, exMsg
+
+def process_command(command: str):
+    command = command.replace(" ","")
+    # print(command)
+    exMsg = ''
+    diceCls = ''
+    if re.match(r'[abpc]\S+', command):
+        match = re.fullmatch(r'([abpc])\S+', command)
+        if match:
+            prefix = match.group(1)
+            rand_value = random(1, 100)
+            result = rand_value
+            if prefix == 'a':
+                diceCls = 'a'
+            elif prefix == 'b':
+                diceCls = 'b'
+                rand_value2 = random(1, 10)
+                result = (min(rand_value // 10, rand_value2) * 10) + (rand_value % 10)
+                exMsg = f'(奖励骰:{rand_value}|{rand_value2})'
+            elif prefix == 'p':
+                diceCls = 'p'
+                rand_value2 = random(1, 10)
+                if rand_value2 == 10:
+                    result = 100
+                else:
+                    result = (max(rand_value // 10, rand_value2) * 10) + (rand_value % 10)
+                exMsg = f'(惩罚骰:{rand_value}|{rand_value2})'
+            elif prefix == 'c':
+                diceCls = 'c'
+                exMsg = f'(标准规则书)'
+            return result, diceCls, exMsg
+        else:
+            return result, diceCls, exMsg
+    elif re.match(r'(\d+)?[Dd](\d+)?([\+\-\*xX/]\d*[Dd]\d+)*', command):
+        result, exMsg = process_expression(command)
+        diceCls = 'd'
+        return result, diceCls, exMsg
+    
+    else:
+        exMsg = '(Error!)'
+        return 0,99,exMsg
 
 
-# ——TEST——
-# args = [
-#         '3d100q3'
-#         ]
 
-# for i in args:
-#     parser = Parser(Lexer(i))
-#     print(parser.parse())
+# for test
 
+# commands = [
+#     "d",
+#     "2d6+1d8",
+#     "2D6+1D8",
+#     "2D6+1D8*5",
+#     "2D6+1D8 *5",
+#     "3D6 *5",
+#     "d55",
+#     "d1000",
+#     "d-100",
+#     "100d2",
+#     "2d50 / 3d5",
+#     "a 测试",
+#     "a 测试",
+#     "a 测试",
+#     "c 速度",
+#     "c 速度",
+#     "c 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "p 速度",
+#     "b 速度",
+#     "d10 + 5d3",
+#     "2d5 * 2d4",
+#     "2d5 * 2d4 + 1d3",
+#     "a60",
+#     "1d5 x 1d2",
+#     "2d5 - 2d2"
+# ]
+
+# for cmd in commands:
+#     try:
+#         result, diceCls, exMsg = process_command(cmd)
+#         print(f"Command: {cmd}, Result: {result}, diceCls: {diceCls}, exMsg: {exMsg}")
+#     except ValueError as e:
+#         print(f"Command: {cmd}, Error: {e}")
